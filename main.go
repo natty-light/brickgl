@@ -174,42 +174,63 @@ func main() {
 
 	reshape(window, width, height)
 
-	vertices := []float32{
-		0.0, 0.0, 0.0,
-		-1.0, 0.0, 0.0,
-		-1.0, 1.0, 0.0,
-	}
+	frontFaceVertices := [][]float32{
+		{
+			-0.5, 0.25, 0.0,
+			-0.5, -0.25, 0.0,
+			0.5, -0.25, 0.0,
+		},
+		{
+			-0.5, 0.25, 0.0,
+			0.5, 0.25, 0.0,
+			0.5, -0.25, 0.0,
+		}}
 
-	otherVertices := []float32{
-		0.0, 0.0, 0.0,
-		0.0, 1.0, 0.0,
-		-1.0, 1.0, 0.0,
-	}
+	backFaceVertices := [][]float32{
+		{
+			-0.25, 0.25, -0.5,
+			-0.25, -0.25, -0.5,
+			0.75, -0.25, -0.5,
+		},
+		{
+			-0.25, 0.75, -0.5,
+			0.75, 0.5, -0.5,
+			0.75, 0.25, -0.5,
+		}}
 
 	shaders := compileShaders()
 	shaderProgram := linkShaders(shaders)
-	VAO := createTriangleVAO(vertices)
-	otherVAO := createTriangleVAO(otherVertices)
-
+	var frontVAO []uint32
+	var backVAO []uint32
+	for _, vertexSet := range frontFaceVertices {
+		frontVAO = append(frontVAO, createTriangleVAO(vertexSet))
+	}
+	for _, vertexSet := range backFaceVertices {
+		backVAO = append(backVAO, createTriangleVAO(vertexSet))
+	}
 	for !window.ShouldClose() {
 		glfw.PollEvents()
 		// perform rendering
 		gl.ClearColor(0.2, 0.5, 0.5, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
-
-		// draw loop
-		gl.UseProgram(shaderProgram)      // ensure the right shader program is being used
-		gl.BindVertexArray(VAO)           // bind data
-		gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
-		gl.BindVertexArray(otherVAO)
-		gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
-		gl.BindVertexArray(0)             // unbind data (so we don't mistakenly use/modify it)
+		// drawSquare fn call
+		drawSquare(shaderProgram, frontVAO)
+		drawSquare(shaderProgram, backVAO)
 		// end of draw loop
 
 		// swap in the rendered buffer
 		window.SwapBuffers()
 
 	}
+}
+
+func drawSquare(shaderProgram uint32, VAO []uint32) {
+	gl.UseProgram(shaderProgram)      // ensure the right shader program is being used
+	gl.BindVertexArray(VAO[0])        // bind data
+	gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
+	gl.BindVertexArray(VAO[1])        // bind data
+	gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
+	gl.BindVertexArray(0)             // unbind data (so we don't mistakenly use/modify it)
 }
 
 func onChar(w *glfw.Window, char rune) {
