@@ -12,6 +12,14 @@ import (
 var (
 	// global rotation
 	width, height      int = 800, 800
+	L1                     = []float32{-0.5, 0.25, -0.5}
+	L2                     = []float32{-0.5, -0.25, -0.5}
+	L3                     = []float32{-0.5, 0.25, 0.5}
+	L4                     = []float32{-0.5, -0.25, 0.5}
+	R1                     = []float32{0.5, 0.25, -0.5}
+	R2                     = []float32{0.5, -0.25, -0.5}
+	R3                     = []float32{0.5, 0.25, 0.5}
+	R4                     = []float32{0.5, -0.25, 0.5}
 	vertexShaderSource     = `
 #version 410 core
 layout (location = 0) in vec3 position;
@@ -20,7 +28,6 @@ void main()
     gl_Position = vec4(position.x, position.y, position.z, 1.0);
 }
 `
-
 	fragmentShaderSource = `
 #version 410 core
 out vec4 color;
