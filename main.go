@@ -181,61 +181,60 @@ func main() {
 	//Define points
 	L1 := []float32{-0.5, 0.25, -0.5}
 	L2 := []float32{-0.5, -0.25, -0.5}
-	// L3 := []float32{-0.5, 0.25, 0.5}
-	// L4 := []float32{-0.5, -0.25, 0.5}
+	L3 := []float32{-0.5, 0.25, 0.5}
+	L4 := []float32{-0.5, -0.25, 0.5}
 	R1 := []float32{0.5, 0.25, -0.5}
 	R2 := []float32{0.5, -0.25, -0.5}
-	// R3 := []float32{0.5, 0.25, 0.5}
-	// R4 := []float32{0.5, -0.25, 0.5}
+	R3 := []float32{0.5, 0.25, 0.5}
+	R4 := []float32{0.5, -0.25, 0.5}
 
 	frontFaceVertices := [][]float32{
 		constructTrongle(L1, L2, R2),
 		constructTrongle(L1, R1, R2),
+		constructTrongle(L3, L4, R4),
+		constructTrongle(L3, R3, R4),
 	}
 
-	frontShaders := compileShaders(vertexShaderSource, fragmentShaderSourceFront)
-	frontShaderProgram := linkShaders(frontShaders)
-	var frontVAO []uint32
+	shaders := compileShaders(vertexShaderSource, fragmentShaderSourceFront)
+	shaderProgram := linkShaders(shaders)
+	var VAO []uint32
 	for _, vertexSet := range frontFaceVertices {
-		frontVAO = append(frontVAO, createTriangleVAO(vertexSet))
+		VAO = append(VAO, createTriangleVAO(vertexSet))
 	}
 
-	axis := glm.Vec3{0, 0, 1}
-	var t float32 = 0
+	axis := glm.Vec3{0, 1, 0}
+	angle := float32(math.Pi / 180)
+
+	transformation := glm.NewTransform()
+	transformation.Iden()
+	rotationQuat := &glm.Quat{W: angle, V: axis}
+	rotationQuat.Normalize()
+
 	for !window.ShouldClose() {
 		glfw.PollEvents()
 
-		transformation := glm.NewTransform()
-		transformation.Iden()
-
-		rotationQuat := &glm.Quat{W: t * math.Pi / 360, V: axis}
-		rotationQuat.Normalize()
 		transformation.RotateQuat(rotationQuat)
-		transformLocation := gl.GetUniformLocation(frontShaderProgram, gl.Str("transform\x00"))
+		transformLocation := gl.GetUniformLocation(shaderProgram, gl.Str("transform\x00"))
 		gl.UniformMatrix4fv(transformLocation, 1, false, &transformation[0])
 		// perform rendering
 		gl.ClearColor(0.2, 0.5, 0.5, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		// drawSquare fn call
-		drawSquare(frontShaderProgram, frontVAO)
+		draw(shaderProgram, VAO)
 		// end of draw loop
-		if t == 359.0 {
-			t = 0
-		} else {
-			t++
-		}
+
 		// swap in the rendered buffer
 		window.SwapBuffers()
 	}
 }
 
-func drawSquare(shaderProgram uint32, VAO []uint32) {
-	gl.UseProgram(shaderProgram)      // ensure the right shader program is being used
-	gl.BindVertexArray(VAO[0])        // bind data
-	gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
-	gl.BindVertexArray(VAO[1])        // bind data
-	gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
-	gl.BindVertexArray(0)             // unbind data (so we don't mistakenly use/modify it)
+func draw(shaderProgram uint32, VAO []uint32) {
+	gl.UseProgram(shaderProgram) // ensure the right shader program is being used
+	for _, v := range VAO {
+		gl.BindVertexArray(v)             // bind data
+		gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
+	}
+	gl.BindVertexArray(0) // unbind data (so we don't mistakenly use/modify it)
 }
 
 func onChar(w *glfw.Window, char rune) {
