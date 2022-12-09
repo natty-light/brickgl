@@ -17,35 +17,59 @@ var (
 	vertexShaderSource     = `
 #version 410 core
 layout (location = 0) in vec3 position;
+layout (location = 1) in vec3 normal;
 
 uniform mat4 transform;
+
+out vec3 Normal;
+out vec3 FragPos;
 
 void main()
 {
     gl_Position = transform*vec4(position.x, position.y, position.z, 1.0);
+	Normal = normal;
+	FragPos = vec3(gl_Position);
 }
 `
-
 	fragmentShaderSource = `
 #version 410 core
+in vec3 Normal;
+in vec3 FragPos;
+
+uniform vec3 objectColor;
+uniform vec3 lightColor;
+uniform vec3 lightPos;
+uniform float ambientStrength;
+
 out vec4 color;
+
 void main()
 {
-    color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	float ambientStrength = 0.2;
+	vec3 ambient = ambientStrength * lightColor;
+	vec3 norm = normalize(Normal);
+	vec3 lightDir = normalize(lightPos - FragPos); 
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuse = diff * lightColor; 
+	vec3 result = (ambient + diffuse) * objectColor;
+	color = vec4(result, 1.0);
 }
 `
 
-//	edgeFragmentShaderSource = `
-//
-// #version 410 core
-// out vec4 edgecolor;
-// void main()
-//
-//	{
-//	    edgecolor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-//	}
-//
-// `
+	L1 = []float32{-0.5, 0.25, -0.5}
+	L2 = []float32{-0.5, -0.25, -0.5}
+	L3 = []float32{-0.5, 0.25, 0.5}
+	L4 = []float32{-0.5, -0.25, 0.5}
+	R1 = []float32{0.5, 0.25, -0.5}
+	R2 = []float32{0.5, -0.25, -0.5}
+	R3 = []float32{0.5, 0.25, 0.5}
+	R4 = []float32{0.5, -0.25, 0.5}
+	N1 = []float32{0.0, 0.0, 1.0}
+	N2 = []float32{0.0, 0.0, -1.0}
+	N3 = []float32{0.0, 1.0, 0.0}
+	N4 = []float32{0.0, -1.0, 0.0}
+	N5 = []float32{1.0, 0.0, 0.0}
+	N6 = []float32{-1.0, 0.0, 0.0}
 )
 
 type getGlParam func(uint32, uint32, *int32)
@@ -134,7 +158,7 @@ func createTriangleVAO(vertices []float32) uint32 {
 	// do not normalize (already done)
 	// stride of 3 * sizeof(float) (separation of vertices)
 	// offset of where the position data starts (0 for the beginning)
-	gl.VertexAttribPointerWithOffset(0, 3, gl.FLOAT, false, 3*4, 0)
+	gl.VertexAttribPointerWithOffset(0, 3, gl.FLOAT, false, 6*4, 0)
 	gl.EnableVertexAttribArray(0)
 
 	// unbind the VAO (safe practice so we don't accidentally (mis)configure it later)
@@ -173,7 +197,7 @@ func main() {
 		panic(err)
 	}
 	defer glfw.Terminate()
-	window, err := glfw.CreateWindow(width, height, "Life", nil, nil)
+	window, err := glfw.CreateWindow(width, height, "Brick", nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -190,38 +214,33 @@ func main() {
 	}
 
 	reshape(window, width, height)
-	//Define points
-	L1 := []float32{-0.5, 0.25, -0.5}
-	L2 := []float32{-0.5, -0.25, -0.5}
-	L3 := []float32{-0.5, 0.25, 0.5}
-	L4 := []float32{-0.5, -0.25, 0.5}
-	R1 := []float32{0.5, 0.25, -0.5}
-	R2 := []float32{0.5, -0.25, -0.5}
-	R3 := []float32{0.5, 0.25, 0.5}
-	R4 := []float32{0.5, -0.25, 0.5}
 
 	frontFaceVertices := [][]float32{
-		constructTrongle(L1, L2, R2),
-		constructTrongle(L1, R1, R2),
-		constructTrongle(L3, L4, R4),
-		constructTrongle(L3, R3, R4),
-		constructTrongle(R1, R2, R4),
-		constructTrongle(R1, R3, R4),
-		constructTrongle(L1, L2, L4),
-		constructTrongle(L1, L3, L4),
+		constructTrongle([][]float32{L1, L2, R2}, N1),
+		constructTrongle([][]float32{L3, L4, R4}, N1),
+		constructTrongle([][]float32{L1, R1, R2}, N2),
+		constructTrongle([][]float32{L3, R3, R4}, N2),
+		constructTrongle([][]float32{R1, R2, R4}, N3),
+		constructTrongle([][]float32{R1, R3, R4}, N3),
+		constructTrongle([][]float32{L1, L2, L4}, N4),
+		constructTrongle([][]float32{L1, L3, L4}, N4),
 	}
 
 	shaders := compileShaders(vertexShaderSource, fragmentShaderSource)
-	// edgeShaders := compileShaders(vertexShaderSource, edgeFragmentShaderSource)
 	shaderProgram := linkShaders(shaders)
-	// edgeShaderProgram := linkShaders(edgeShaders)
 	var VAO []uint32
 	for _, vertexSet := range frontFaceVertices {
 		VAO = append(VAO, createTriangleVAO(vertexSet))
 	}
 
+	// Lighting
+	lightPos := glm.Vec3{0.0, 0.0, -0.5}
+	lightColor := glm.Vec3{1.0, 1.0, 1.0}
+	objectColor := glm.Vec3{1.0, 0.0, 0.0}
+
+	// Animation
 	axis := glm.Vec3{0, 1, 0}
-	angle := float32(math.Pi / 180)
+	angle := float32(math.Pi / 360)
 
 	transformation := glm.NewTransform()
 	transformation.Iden()
@@ -231,20 +250,25 @@ func main() {
 	for !window.ShouldClose() {
 		glfw.PollEvents()
 
+		// Lighting
+		lightPosLocation := gl.GetUniformLocation(shaderProgram, gl.Str("lightPos\x00"))
+		objectColorLocation := gl.GetUniformLocation(shaderProgram, gl.Str("objectColor\x00"))
+		lightColorLocation := gl.GetUniformLocation(shaderProgram, gl.Str("lightColor\x00"))
+
+		gl.Uniform3fv(lightPosLocation, 1, &lightPos[0])
+		gl.Uniform3fv(lightColorLocation, 1, &lightColor[0])
+		gl.Uniform3fv(objectColorLocation, 1, &objectColor[0])
+
+		// Animation
 		transformation.RotateQuat(rotationQuat)
 		transformLocation := gl.GetUniformLocation(shaderProgram, gl.Str("transform\x00"))
 		gl.UniformMatrix4fv(transformLocation, 1, false, &transformation[0])
+
 		// perform rendering
-		gl.ClearColor(0.2, 0.5, 0.5, 1.0)
+		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		// drawSquare fn call
-
-		gl.PolygonOffset(0, 0)
-		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 		draw(shaderProgram, VAO)
-		// gl.PolygonOffset(0, -1)
-		// gl.PolygonMode(gl.FRONT_FACE, gl.LINE)
-		// draw(edgeShaderProgram, VAO)
 
 		// end of draw loop
 
@@ -275,6 +299,10 @@ func onKey(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods 
 	}
 }
 
-func constructTrongle(pointOne []float32, pointTwo []float32, pointThree []float32) (trongle []float32) {
-	return append(pointOne, append(pointTwo, pointThree...)...)
+func constructTrongle(points [][]float32, normal []float32) (trongle []float32) {
+	for _, point := range points {
+		trongle = append(trongle, point...)
+		trongle = append(trongle, normal...)
+	}
+	return trongle
 }
