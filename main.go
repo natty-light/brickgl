@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
+	"math"
 	"runtime"
 	"unsafe"
 
+	"github.com/engoengine/glm"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
 )
@@ -15,9 +17,12 @@ var (
 	vertexShaderSource     = `
 #version 410 core
 layout (location = 0) in vec3 position;
+
+uniform mat4 transform;
+
 void main()
 {
-    gl_Position = vec4(position.x, position.y, position.z, 1.0);
+    gl_Position = transform*vec4(position.x, position.y, position.z, 1.0);
 }
 `
 
@@ -188,23 +193,33 @@ func main() {
 		constructTrongle(L1, R1, R2),
 	}
 
+	frontShaders := compileShaders(vertexShaderSource, fragmentShaderSourceFront)
+	frontShaderProgram := linkShaders(frontShaders)
+	var frontVAO []uint32
+	for _, vertexSet := range frontFaceVertices {
+		frontVAO = append(frontVAO, createTriangleVAO(vertexSet))
+	}
+
+	var t float32 = 0
 	for !window.ShouldClose() {
-
-		frontShaders := compileShaders(vertexShaderSource, fragmentShaderSourceFront)
-		frontShaderProgram := linkShaders(frontShaders)
-		var frontVAO []uint32
-		for _, vertexSet := range frontFaceVertices {
-			frontVAO = append(frontVAO, createTriangleVAO(vertexSet))
-		}
-
 		glfw.PollEvents()
+
+		transformation := glm.NewTransform()
+		transformation.Iden()
+		transformation.RotateQuat(&glm.Quat{W: t * math.Pi / 360, V: glm.Vec3{0, 0, 1}})
+		transformLocation := gl.GetUniformLocation(frontShaderProgram, gl.Str("transform\x00"))
+		gl.UniformMatrix4fv(transformLocation, 1, false, &transformation[0])
 		// perform rendering
 		gl.ClearColor(0.2, 0.5, 0.5, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		// drawSquare fn call
 		drawSquare(frontShaderProgram, frontVAO)
 		// end of draw loop
-
+		if t == 360.0 {
+			t = 0
+		} else {
+			t++
+		}
 		// swap in the rendered buffer
 		window.SwapBuffers()
 	}

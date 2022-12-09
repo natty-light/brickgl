@@ -1,3 +1,7 @@
+github.com/EngoEngine/math v1.0.4 h1:ejDfSg48ynB9T6btiu9EHjZmpQgW/zHf3IeC7SqXXv8=
+github.com/EngoEngine/math v1.0.4/go.mod h1:d8SnfwiaImse0lB3JuR91B2CShZmMxaTWaWZ/ZxDxAU=
+github.com/engoengine/glm v0.0.0-20170725114841-9c08f4d1f668 h1:rVKp3XvwVYVidU1oOcahpRdoG32EJ1+CLxiwZOADpNc=
+github.com/engoengine/glm v0.0.0-20170725114841-9c08f4d1f668/go.mod h1:vZgjKvLPzQvHBEK5VZ2caeMU8LnI7eycnky96Xf94TU=
 github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6 h1:zDw5v7qm4yH7N8C8uWd+8Ii9rROdgWxQuGoJ9WDXxfk=
 github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6/go.mod h1:9YTyiznxEY1fVinfM7RvRcjRHbw2xLBJ3AAGIT0I4Nw=
 github.com/go-gl/glfw v0.0.0-20221017161538-93cebf72946b h1:2hdUMUOJuLQkhaPAwoyOeSzoaBydYEkXkBEuqDuDBfg=
