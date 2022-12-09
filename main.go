@@ -193,6 +193,10 @@ func main() {
 		constructTrongle(L1, R1, R2),
 		constructTrongle(L3, L4, R4),
 		constructTrongle(L3, R3, R4),
+		constructTrongle(R1, R2, R4),
+		constructTrongle(R1, R3, R4),
+		constructTrongle(L1, L2, L4),
+		constructTrongle(L1, L3, L4),
 	}
 
 	shaders := compileShaders(vertexShaderSource, fragmentShaderSourceFront)
