@@ -26,7 +26,7 @@ void main()
 }
 `
 
-	fragmentShaderSourceFront = `
+	fragmentShaderSource = `
 #version 410 core
 out vec4 color;
 void main()
@@ -34,6 +34,18 @@ void main()
     color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }
 `
+
+//	edgeFragmentShaderSource = `
+//
+// #version 410 core
+// out vec4 edgecolor;
+// void main()
+//
+//	{
+//	    edgecolor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+//	}
+//
+// `
 )
 
 type getGlParam func(uint32, uint32, *int32)
@@ -199,8 +211,10 @@ func main() {
 		constructTrongle(L1, L3, L4),
 	}
 
-	shaders := compileShaders(vertexShaderSource, fragmentShaderSourceFront)
+	shaders := compileShaders(vertexShaderSource, fragmentShaderSource)
+	// edgeShaders := compileShaders(vertexShaderSource, edgeFragmentShaderSource)
 	shaderProgram := linkShaders(shaders)
+	// edgeShaderProgram := linkShaders(edgeShaders)
 	var VAO []uint32
 	for _, vertexSet := range frontFaceVertices {
 		VAO = append(VAO, createTriangleVAO(vertexSet))
@@ -224,7 +238,14 @@ func main() {
 		gl.ClearColor(0.2, 0.5, 0.5, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		// drawSquare fn call
+
+		gl.PolygonOffset(0, 0)
+		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 		draw(shaderProgram, VAO)
+		// gl.PolygonOffset(0, -1)
+		// gl.PolygonMode(gl.FRONT_FACE, gl.LINE)
+		// draw(edgeShaderProgram, VAO)
+
 		// end of draw loop
 
 		// swap in the rendered buffer
