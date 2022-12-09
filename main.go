@@ -200,13 +200,17 @@ func main() {
 		frontVAO = append(frontVAO, createTriangleVAO(vertexSet))
 	}
 
+	axis := glm.Vec3{0, 0, 1}
 	var t float32 = 0
 	for !window.ShouldClose() {
 		glfw.PollEvents()
 
 		transformation := glm.NewTransform()
 		transformation.Iden()
-		transformation.RotateQuat(&glm.Quat{W: t * math.Pi / 360, V: glm.Vec3{0, 0, 1}})
+
+		rotationQuat := &glm.Quat{W: t * math.Pi / 360, V: axis}
+		rotationQuat.Normalize()
+		transformation.RotateQuat(rotationQuat)
 		transformLocation := gl.GetUniformLocation(frontShaderProgram, gl.Str("transform\x00"))
 		gl.UniformMatrix4fv(transformLocation, 1, false, &transformation[0])
 		// perform rendering
@@ -215,7 +219,7 @@ func main() {
 		// drawSquare fn call
 		drawSquare(frontShaderProgram, frontVAO)
 		// end of draw loop
-		if t == 360.0 {
+		if t == 359.0 {
 			t = 0
 		} else {
 			t++
