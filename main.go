@@ -12,14 +12,6 @@ import (
 var (
 	// global rotation
 	width, height      int = 800, 800
-	L1                     = []float32{-0.5, 0.25, -0.5}
-	L2                     = []float32{-0.5, -0.25, -0.5}
-	L3                     = []float32{-0.5, 0.25, 0.5}
-	L4                     = []float32{-0.5, -0.25, 0.5}
-	R1                     = []float32{0.5, 0.25, -0.5}
-	R2                     = []float32{0.5, -0.25, -0.5}
-	R3                     = []float32{0.5, 0.25, 0.5}
-	R4                     = []float32{0.5, -0.25, 0.5}
 	vertexShaderSource     = `
 #version 410 core
 layout (location = 0) in vec3 position;
@@ -28,12 +20,13 @@ void main()
     gl_Position = vec4(position.x, position.y, position.z, 1.0);
 }
 `
-	fragmentShaderSource = `
+
+	fragmentShaderSourceFront = `
 #version 410 core
 out vec4 color;
 void main()
 {
-    color = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }
 `
 )
@@ -63,17 +56,17 @@ func checkProgramLinkErrors(program uint32) {
 		"ERROR::PROGRAM::LINKING_FAILURE")
 }
 
-func compileShaders() []uint32 {
+func compileShaders(vertShaderSource string, fragShaderSource string) []uint32 {
 	// create the vertex shader
 	vertexShader := gl.CreateShader(gl.VERTEX_SHADER)
-	shaderSourceChars, freeVertexShaderFunc := gl.Strs(vertexShaderSource)
+	shaderSourceChars, freeVertexShaderFunc := gl.Strs(vertShaderSource)
 	gl.ShaderSource(vertexShader, 1, shaderSourceChars, nil)
 	gl.CompileShader(vertexShader)
 	checkShaderCompileErrors(vertexShader)
 
 	// create the fragment shader
 	fragmentShader := gl.CreateShader(gl.FRAGMENT_SHADER)
-	shaderSourceChars, freeFragmentShaderFunc := gl.Strs(fragmentShaderSource)
+	shaderSourceChars, freeFragmentShaderFunc := gl.Strs(fragShaderSource)
 	gl.ShaderSource(fragmentShader, 1, shaderSourceChars, nil)
 	gl.CompileShader(fragmentShader)
 	checkShaderCompileErrors(fragmentShader)
@@ -124,7 +117,7 @@ func createTriangleVAO(vertices []float32) uint32 {
 	// do not normalize (already done)
 	// stride of 3 * sizeof(float) (separation of vertices)
 	// offset of where the position data starts (0 for the beginning)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 3*4, gl.PtrOffset(0))
+	gl.VertexAttribPointerWithOffset(0, 3, gl.FLOAT, false, 3*4, 0)
 	gl.EnableVertexAttribArray(0)
 
 	// unbind the VAO (safe practice so we don't accidentally (mis)configure it later)
@@ -180,54 +173,40 @@ func main() {
 	}
 
 	reshape(window, width, height)
+	//Define points
+	L1 := []float32{-0.5, 0.25, -0.5}
+	L2 := []float32{-0.5, -0.25, -0.5}
+	// L3 := []float32{-0.5, 0.25, 0.5}
+	// L4 := []float32{-0.5, -0.25, 0.5}
+	R1 := []float32{0.5, 0.25, -0.5}
+	R2 := []float32{0.5, -0.25, -0.5}
+	// R3 := []float32{0.5, 0.25, 0.5}
+	// R4 := []float32{0.5, -0.25, 0.5}
 
 	frontFaceVertices := [][]float32{
-		{
-			-0.5, 0.25, 0.0,
-			-0.5, -0.25, 0.0,
-			0.5, -0.25, 0.0,
-		},
-		{
-			-0.5, 0.25, 0.0,
-			0.5, 0.25, 0.0,
-			0.5, -0.25, 0.0,
-		}}
-
-	backFaceVertices := [][]float32{
-		{
-			-0.25, 0.25, -0.5,
-			-0.25, -0.25, -0.5,
-			0.75, -0.25, -0.5,
-		},
-		{
-			-0.25, 0.75, -0.5,
-			0.75, 0.5, -0.5,
-			0.75, 0.25, -0.5,
-		}}
-
-	shaders := compileShaders()
-	shaderProgram := linkShaders(shaders)
-	var frontVAO []uint32
-	var backVAO []uint32
-	for _, vertexSet := range frontFaceVertices {
-		frontVAO = append(frontVAO, createTriangleVAO(vertexSet))
+		constructTrongle(L1, L2, R2),
+		constructTrongle(L1, R1, R2),
 	}
-	for _, vertexSet := range backFaceVertices {
-		backVAO = append(backVAO, createTriangleVAO(vertexSet))
-	}
+
 	for !window.ShouldClose() {
+
+		frontShaders := compileShaders(vertexShaderSource, fragmentShaderSourceFront)
+		frontShaderProgram := linkShaders(frontShaders)
+		var frontVAO []uint32
+		for _, vertexSet := range frontFaceVertices {
+			frontVAO = append(frontVAO, createTriangleVAO(vertexSet))
+		}
+
 		glfw.PollEvents()
 		// perform rendering
 		gl.ClearColor(0.2, 0.5, 0.5, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		// drawSquare fn call
-		drawSquare(shaderProgram, frontVAO)
-		drawSquare(shaderProgram, backVAO)
+		drawSquare(frontShaderProgram, frontVAO)
 		// end of draw loop
 
 		// swap in the rendered buffer
 		window.SwapBuffers()
-
 	}
 }
 
@@ -251,4 +230,8 @@ func onKey(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods 
 		key == glfw.KeyQ && action == glfw.Press:
 		w.SetShouldClose(true)
 	}
+}
+
+func constructTrongle(pointOne []float32, pointTwo []float32, pointThree []float32) (trongle []float32) {
+	return append(pointOne, append(pointTwo, pointThree...)...)
 }
