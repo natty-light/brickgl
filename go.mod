@@ -8,6 +8,6 @@ require (
 )
 
 require (
-	github.com/EngoEngine/math v1.0.4 // indirect
+	github.com/EngoEngine/math v1.0.4 
 	github.com/engoengine/glm v0.0.0-20170725114841-9c08f4d1f668 
 )
