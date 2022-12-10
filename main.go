@@ -55,7 +55,7 @@ void main()
 	color = vec4(result, 1.0);
 }
 `
-
+	// Vertex definitions
 	L1 = []float32{-0.5, 0.25, -0.5}
 	L2 = []float32{-0.5, -0.25, -0.5}
 	L3 = []float32{-0.5, 0.25, 0.5}
@@ -64,12 +64,14 @@ void main()
 	R2 = []float32{0.5, -0.25, -0.5}
 	R3 = []float32{0.5, 0.25, 0.5}
 	R4 = []float32{0.5, -0.25, 0.5}
-	N1 = []float32{0.0, 0.0, 1.0}
-	N2 = []float32{0.0, 0.0, -1.0}
-	N3 = []float32{0.0, 1.0, 0.0}
-	N4 = []float32{0.0, -1.0, 0.0}
-	N5 = []float32{1.0, 0.0, 0.0}
-	N6 = []float32{-1.0, 0.0, 0.0}
+
+	// Vertex Normal Vector defintions
+	posXNorm = []float32{1.0, 0.0, 0.0}
+	negXNorm = []float32{-1.0, 0.0, 0.0}
+	posYNorm = []float32{0.0, 1.0, 0.0}
+	negYNorm = []float32{0.0, -1.0, 0.0}
+	posZNorm = []float32{0.0, 0.0, 1.0}
+	negZNorm = []float32{0.0, 0.0, -1.0}
 )
 
 type getGlParam func(uint32, uint32, *int32)
@@ -216,14 +218,27 @@ func main() {
 	reshape(window, width, height)
 
 	frontFaceVertices := [][]float32{
-		constructTrongle([][]float32{L1, L2, R2}, N1),
-		constructTrongle([][]float32{L3, L4, R4}, N1),
-		constructTrongle([][]float32{L1, R1, R2}, N2),
-		constructTrongle([][]float32{L3, R3, R4}, N2),
-		constructTrongle([][]float32{R1, R2, R4}, N3),
-		constructTrongle([][]float32{R1, R3, R4}, N3),
-		constructTrongle([][]float32{L1, L2, L4}, N4),
-		constructTrongle([][]float32{L1, L3, L4}, N4),
+		// Front Face
+		constructTrongle([][]float32{L1, L2, R2}, posZNorm),
+		constructTrongle([][]float32{L1, R1, R2}, posZNorm),
+
+		// Back Face
+		constructTrongle([][]float32{L3, L4, R4}, negZNorm),
+		constructTrongle([][]float32{L3, R3, R4}, negZNorm),
+
+		// Right Face
+		constructTrongle([][]float32{R1, R2, R4}, posXNorm),
+		constructTrongle([][]float32{R1, R3, R4}, posXNorm),
+
+		// Left Face
+		constructTrongle([][]float32{L1, L2, L4}, negXNorm),
+		constructTrongle([][]float32{L1, L3, L4}, negXNorm),
+		// Top
+		constructTrongle([][]float32{L1, R1, R3}, posYNorm),
+		constructTrongle([][]float32{L1, L3, R3}, posYNorm),
+		// Bottom Face
+		constructTrongle([][]float32{L2, R2, R4}, negYNorm),
+		constructTrongle([][]float32{L2, L4, R4}, negYNorm),
 	}
 
 	shaders := compileShaders(vertexShaderSource, fragmentShaderSource)
@@ -234,7 +249,7 @@ func main() {
 	}
 
 	// Lighting
-	lightPos := glm.Vec3{0.0, 0.0, -0.5}
+	lightPos := glm.Vec3{0.5, 1.0, -1.0}
 	lightColor := glm.Vec3{1.0, 1.0, 1.0}
 	objectColor := glm.Vec3{1.0, 0.0, 0.0}
 
@@ -268,6 +283,7 @@ func main() {
 		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
 		// drawSquare fn call
+		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
 		draw(shaderProgram, VAO)
 
 		// end of draw loop
