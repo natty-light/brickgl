@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"runtime"
@@ -28,7 +29,7 @@ void main()
 {
     gl_Position = transform*vec4(position.x, position.y, position.z, 1.0);
 	Normal = normal;
-	FragPos = vec3(gl_Position);
+	FragPos = vec3(transform*vec4(position.x, position.y, position.z, 1.0));
 }
 `
 	fragmentShaderSource = `
@@ -58,10 +59,11 @@ void main()
 	// Vertex definitions
 	L1 = []float32{-0.25, 0.125, -0.5}
 	L2 = []float32{-0.25, -0.125, -0.5}
-	L3 = []float32{-0.25, 0.125, 0.5}
-	L4 = []float32{-0.25, -0.125, 0.5}
 	R1 = []float32{0.25, 0.125, -0.5}
 	R2 = []float32{0.25, -0.125, -0.5}
+
+	L3 = []float32{-0.25, 0.125, 0.5}
+	L4 = []float32{-0.25, -0.125, 0.5}
 	R3 = []float32{0.25, 0.125, 0.5}
 	R4 = []float32{0.25, -0.125, 0.5}
 
@@ -139,11 +141,9 @@ func linkShaders(shaders []uint32) uint32 {
 	return program
 }
 
-func createTriangleVAO(vertices []float32) uint32 {
-	var VAO uint32
-	gl.GenVertexArrays(1, &VAO)
+func createVAO(vertices []float32) (VAO uint32, VBO uint32) {
 
-	var VBO uint32
+	gl.GenVertexArrays(1, &VAO)
 	gl.GenBuffers(1, &VBO)
 
 	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointers()
@@ -166,7 +166,7 @@ func createTriangleVAO(vertices []float32) uint32 {
 	// unbind the VAO (safe practice so we don't accidentally (mis)configure it later)
 	gl.BindVertexArray(0)
 
-	return VAO
+	return VAO, VBO
 }
 
 func reshape(window *glfw.Window, w, h int) {
@@ -217,36 +217,39 @@ func main() {
 
 	reshape(window, width, height)
 
-	frontFaceVertices := [][]float32{
-		// Bottom Face
-		constructTrongle([][]float32{L2, R2, R4}, negYNorm),
-		constructTrongle([][]float32{L2, L4, R4}, negYNorm),
+	trongles := [][]float32{
+		// Front Face
+		constructTrongle([][]float32{L1, R1, R2}, posZNorm),
+		constructTrongle([][]float32{R2, R1, L1}, posZNorm),
+		// Back Face
+		constructTrongle([][]float32{L3, L4, R4}, negZNorm),
+		constructTrongle([][]float32{L3, R3, R4}, negZNorm),
 		// Right Face
 		constructTrongle([][]float32{R1, R2, R4}, posXNorm),
 		constructTrongle([][]float32{R1, R3, R4}, posXNorm),
 		// Left Face
 		constructTrongle([][]float32{L1, L2, L4}, negXNorm),
 		constructTrongle([][]float32{L1, L3, L4}, negXNorm),
-		// Back Face
-		constructTrongle([][]float32{L3, L4, R4}, negZNorm),
-		constructTrongle([][]float32{L3, R3, R4}, negZNorm),
-		// Front Face
-		constructTrongle([][]float32{L1, L2, R2}, posZNorm),
-		constructTrongle([][]float32{L1, R1, R2}, posZNorm),
 		// Top Face
-		constructTrongle([][]float32{L1, R1, R3}, posYNorm),
-		constructTrongle([][]float32{L1, L3, R3}, posYNorm),
+		constructTrongle([][]float32{L1, R1, R3}, negYNorm),
+		constructTrongle([][]float32{L1, L3, R3}, negYNorm),
+		// Bottom Face
+		constructTrongle([][]float32{L2, R2, R4}, posYNorm),
+		constructTrongle([][]float32{L2, L4, R4}, posYNorm),
+	}
+	var vertices []float32 = []float32{}
+	for _, trongle := range trongles {
+		vertices = append(vertices, trongle...)
+		fmt.Println(trongle)
 	}
 
+	fmt.Println(len(vertices))
 	shaders := compileShaders(vertexShaderSource, fragmentShaderSource)
 	shaderProgram := linkShaders(shaders)
-	var VAO []uint32
-	for _, vertexSet := range frontFaceVertices {
-		VAO = append(VAO, createTriangleVAO(vertexSet))
-	}
+	var VAO, VBO uint32 = createVAO(vertices)
 
 	// Lighting
-	lightPos := glm.Vec3{0.5, 1.0, -1.0}
+	lightPos := glm.Vec3{1.2, 1.0, 2.0}
 	lightColor := glm.Vec3{1.0, 1.0, 1.0}
 	objectColor := glm.Vec3{1.0, 0.0, 0.0}
 
@@ -266,6 +269,8 @@ func main() {
 
 	rotationQuat = &glm.Quat{W: angle, V: axis}
 	rotationQuat.Normalize()
+
+	gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
 
 	for !window.ShouldClose() {
 		glfw.PollEvents()
@@ -287,24 +292,17 @@ func main() {
 		// perform rendering
 		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
-		// drawSquare fn call
-		gl.PolygonMode(gl.FRONT_AND_BACK, gl.FILL)
-		draw(shaderProgram, VAO)
-
+		gl.UseProgram(shaderProgram)       // ensure the right shader program is being used
+		gl.BindVertexArray(VAO)            // bind data
+		gl.DrawArrays(gl.TRIANGLES, 0, 36) // perform draw call
+		gl.BindVertexArray(0)              // unbind data (so we don't mistakenly use/modify it)
 		// end of draw loop
 
 		// swap in the rendered buffer
 		window.SwapBuffers()
 	}
-}
-
-func draw(shaderProgram uint32, VAO []uint32) {
-	gl.UseProgram(shaderProgram) // ensure the right shader program is being used
-	for _, v := range VAO {
-		gl.BindVertexArray(v)             // bind data
-		gl.DrawArrays(gl.TRIANGLES, 0, 3) // perform draw call
-	}
-	gl.BindVertexArray(0) // unbind data (so we don't mistakenly use/modify it)
+	gl.DeleteVertexArrays(1, &VAO)
+	gl.DeleteBuffers(1, &VBO)
 }
 
 func onChar(w *glfw.Window, char rune) {
