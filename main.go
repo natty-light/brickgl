@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 	"runtime"
+	"time"
 	"unsafe"
 
+	"github.com/EngoEngine/math"
 	"github.com/engoengine/glm"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.1/glfw"
@@ -162,6 +163,8 @@ func createVAO(vertices []float32) (VAO uint32, VBO uint32) {
 	// offset of where the position data starts (0 for the beginning)
 	gl.VertexAttribPointerWithOffset(0, 3, gl.FLOAT, false, 6*4, 0)
 	gl.EnableVertexAttribArray(0)
+	gl.VertexAttribPointerWithOffset(1, 3, gl.FLOAT, false, 6*4, 3*4)
+	gl.EnableVertexAttribArray(1)
 
 	// unbind the VAO (safe practice so we don't accidentally (mis)configure it later)
 	gl.BindVertexArray(0)
@@ -209,7 +212,7 @@ func main() {
 	window.SetKeyCallback(onKey)
 	window.SetCharCallback(onChar)
 
-	glfw.SwapInterval(1)
+	glfw.SwapInterval(-1)
 	err = gl.Init()
 	if err != nil {
 		panic(err)
@@ -219,14 +222,14 @@ func main() {
 
 	trongles := [][]float32{
 		// Front Face
-		constructTrongle([][]float32{L1, R1, R2}, posZNorm),
+		constructTrongle([][]float32{L1, L2, R2}, posZNorm),
 		constructTrongle([][]float32{R2, R1, L1}, posZNorm),
 		// Back Face
 		constructTrongle([][]float32{L3, L4, R4}, negZNorm),
 		constructTrongle([][]float32{L3, R3, R4}, negZNorm),
 		// Right Face
-		constructTrongle([][]float32{R1, R2, R4}, posXNorm),
-		constructTrongle([][]float32{R1, R3, R4}, posXNorm),
+		constructTrongle([][]float32{R1, R2, R4}, negXNorm),
+		constructTrongle([][]float32{R1, R3, R4}, negXNorm),
 		// Left Face
 		constructTrongle([][]float32{L1, L2, L4}, negXNorm),
 		constructTrongle([][]float32{L1, L3, L4}, negXNorm),
@@ -244,8 +247,10 @@ func main() {
 	}
 
 	fmt.Println(len(vertices))
+
 	shaders := compileShaders(vertexShaderSource, fragmentShaderSource)
 	shaderProgram := linkShaders(shaders)
+
 	var VAO, VBO uint32 = createVAO(vertices)
 
 	// Lighting
@@ -255,51 +260,53 @@ func main() {
 
 	// Animation
 
-	axis := glm.Vec3{1, 0, 0}
-	angle := float32(math.Pi / 8)
-
 	transformation := glm.NewTransform()
 	transformation.Iden()
+
+	// First rotation about X axis
+	axis := glm.Vec3{1.0, 0.0, 0.0}
+	angle := float32(math.Pi / 8.0)
+
 	rotationQuat := &glm.Quat{W: angle, V: axis}
 	rotationQuat.Normalize()
 	transformation.RotateQuat(rotationQuat)
-
-	axis = glm.Vec3{0, 1, 0}
-	angle = float32(math.Pi / 360)
+	// Set up animiation rotation
+	axis = glm.Vec3{0.0, 1, 0.0}
+	angle = float32(math.Pi / 360.0)
 
 	rotationQuat = &glm.Quat{W: angle, V: axis}
 	rotationQuat.Normalize()
+	gl.PolygonMode(gl.FRONT_FACE, gl.FILL)
 
-	gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
-
+	var lightColorLocation, objectColorLocation, lightPosLocation, transformLocation int32
 	for !window.ShouldClose() {
-		glfw.PollEvents()
+		// Animation
+		//transformation = glm.HomogRotate3D(t*math.Pi/180., &glm.Vec3{0.0, 1.0, 0})
+		transformation.RotateQuat(rotationQuat)
+		transformLocation = gl.GetUniformLocation(shaderProgram, gl.Str("transform\x00"))
+		gl.UniformMatrix4fv(transformLocation, 1, false, &transformation[0])
 
-		// Lighting
-		lightPosLocation := gl.GetUniformLocation(shaderProgram, gl.Str("lightPos\x00"))
-		objectColorLocation := gl.GetUniformLocation(shaderProgram, gl.Str("objectColor\x00"))
-		lightColorLocation := gl.GetUniformLocation(shaderProgram, gl.Str("lightColor\x00"))
+		lightPosLocation = gl.GetUniformLocation(shaderProgram, gl.Str("lightPos\x00"))
+		objectColorLocation = gl.GetUniformLocation(shaderProgram, gl.Str("objectColor\x00"))
+		lightColorLocation = gl.GetUniformLocation(shaderProgram, gl.Str("lightColor\x00"))
 
 		gl.Uniform3fv(lightPosLocation, 1, &lightPos[0])
 		gl.Uniform3fv(lightColorLocation, 1, &lightColor[0])
 		gl.Uniform3fv(objectColorLocation, 1, &objectColor[0])
 
-		// Animation
-		transformation.RotateQuat(rotationQuat)
-		transformLocation := gl.GetUniformLocation(shaderProgram, gl.Str("transform\x00"))
-		gl.UniformMatrix4fv(transformLocation, 1, false, &transformation[0])
-
 		// perform rendering
 		gl.ClearColor(0.0, 0.0, 0.0, 1.0)
 		gl.Clear(gl.COLOR_BUFFER_BIT)
-		gl.UseProgram(shaderProgram)       // ensure the right shader program is being used
-		gl.BindVertexArray(VAO)            // bind data
-		gl.DrawArrays(gl.TRIANGLES, 0, 36) // perform draw call
-		gl.BindVertexArray(0)              // unbind data (so we don't mistakenly use/modify it)
+		gl.UseProgram(shaderProgram)                           // ensure the right shader program is being used
+		gl.BindVertexArray(VAO)                                // bind data
+		gl.DrawArrays(gl.TRIANGLES, 0, int32(len(vertices)/6)) // perform draw call
+		gl.BindVertexArray(0)                                  // unbind data (so we don't mistakenly use/modify it)
 		// end of draw loop
 
 		// swap in the rendered buffer
 		window.SwapBuffers()
+		glfw.PollEvents()
+		time.Sleep(16 * time.Millisecond)
 	}
 	gl.DeleteVertexArrays(1, &VAO)
 	gl.DeleteBuffers(1, &VBO)
