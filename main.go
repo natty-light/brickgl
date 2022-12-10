@@ -254,7 +254,7 @@ func main() {
 	var VAO, VBO uint32 = createVAO(vertices)
 
 	// Lighting
-	lightPos := glm.Vec3{1.2, 1.0, 2.0}
+	lightPos := glm.Vec3{1.2, 1.0, -2.0}
 	lightColor := glm.Vec3{1.0, 1.0, 1.0}
 	objectColor := glm.Vec3{1.0, 0.0, 0.0}
 
