@@ -56,14 +56,14 @@ void main()
 }
 `
 	// Vertex definitions
-	L1 = []float32{-0.5, 0.25, -0.5}
-	L2 = []float32{-0.5, -0.25, -0.5}
-	L3 = []float32{-0.5, 0.25, 0.5}
-	L4 = []float32{-0.5, -0.25, 0.5}
-	R1 = []float32{0.5, 0.25, -0.5}
-	R2 = []float32{0.5, -0.25, -0.5}
-	R3 = []float32{0.5, 0.25, 0.5}
-	R4 = []float32{0.5, -0.25, 0.5}
+	L1 = []float32{-0.25, 0.125, -0.5}
+	L2 = []float32{-0.25, -0.125, -0.5}
+	L3 = []float32{-0.25, 0.125, 0.5}
+	L4 = []float32{-0.25, -0.125, 0.5}
+	R1 = []float32{0.25, 0.125, -0.5}
+	R2 = []float32{0.25, -0.125, -0.5}
+	R3 = []float32{0.25, 0.125, 0.5}
+	R4 = []float32{0.25, -0.125, 0.5}
 
 	// Vertex Normal Vector defintions
 	posXNorm = []float32{1.0, 0.0, 0.0}
@@ -218,27 +218,24 @@ func main() {
 	reshape(window, width, height)
 
 	frontFaceVertices := [][]float32{
-		// Front Face
-		constructTrongle([][]float32{L1, L2, R2}, posZNorm),
-		constructTrongle([][]float32{L1, R1, R2}, posZNorm),
-
-		// Back Face
-		constructTrongle([][]float32{L3, L4, R4}, negZNorm),
-		constructTrongle([][]float32{L3, R3, R4}, negZNorm),
-
-		// Right Face
-		constructTrongle([][]float32{R1, R2, R4}, posXNorm),
-		constructTrongle([][]float32{R1, R3, R4}, posXNorm),
-
-		// Left Face
-		constructTrongle([][]float32{L1, L2, L4}, negXNorm),
-		constructTrongle([][]float32{L1, L3, L4}, negXNorm),
-		// Top
-		constructTrongle([][]float32{L1, R1, R3}, posYNorm),
-		constructTrongle([][]float32{L1, L3, R3}, posYNorm),
 		// Bottom Face
 		constructTrongle([][]float32{L2, R2, R4}, negYNorm),
 		constructTrongle([][]float32{L2, L4, R4}, negYNorm),
+		// Right Face
+		constructTrongle([][]float32{R1, R2, R4}, posXNorm),
+		constructTrongle([][]float32{R1, R3, R4}, posXNorm),
+		// Left Face
+		constructTrongle([][]float32{L1, L2, L4}, negXNorm),
+		constructTrongle([][]float32{L1, L3, L4}, negXNorm),
+		// Back Face
+		constructTrongle([][]float32{L3, L4, R4}, negZNorm),
+		constructTrongle([][]float32{L3, R3, R4}, negZNorm),
+		// Front Face
+		constructTrongle([][]float32{L1, L2, R2}, posZNorm),
+		constructTrongle([][]float32{L1, R1, R2}, posZNorm),
+		// Top Face
+		constructTrongle([][]float32{L1, R1, R3}, posYNorm),
+		constructTrongle([][]float32{L1, L3, R3}, posYNorm),
 	}
 
 	shaders := compileShaders(vertexShaderSource, fragmentShaderSource)
@@ -254,12 +251,20 @@ func main() {
 	objectColor := glm.Vec3{1.0, 0.0, 0.0}
 
 	// Animation
-	axis := glm.Vec3{0, 1, 0}
-	angle := float32(math.Pi / 360)
+
+	axis := glm.Vec3{1, 0, 0}
+	angle := float32(math.Pi / 8)
 
 	transformation := glm.NewTransform()
 	transformation.Iden()
 	rotationQuat := &glm.Quat{W: angle, V: axis}
+	rotationQuat.Normalize()
+	transformation.RotateQuat(rotationQuat)
+
+	axis = glm.Vec3{0, 1, 0}
+	angle = float32(math.Pi / 360)
+
+	rotationQuat = &glm.Quat{W: angle, V: axis}
 	rotationQuat.Normalize()
 
 	for !window.ShouldClose() {
