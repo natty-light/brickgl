@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"runtime"
 	"time"
@@ -243,10 +242,7 @@ func main() {
 	var vertices []float32 = []float32{}
 	for _, trongle := range trongles {
 		vertices = append(vertices, trongle...)
-		fmt.Println(trongle)
 	}
-
-	fmt.Println(len(vertices))
 
 	shaders := compileShaders(vertexShaderSource, fragmentShaderSource)
 	shaderProgram := linkShaders(shaders)
