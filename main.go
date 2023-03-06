@@ -9,7 +9,7 @@ import (
 	"github.com/EngoEngine/math"
 	"github.com/engoengine/glm"
 	"github.com/go-gl/gl/v2.1/gl"
-	"github.com/go-gl/glfw/v3.1/glfw"
+	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
 var (
@@ -201,6 +201,10 @@ func main() {
 		panic(err)
 	}
 	defer glfw.Terminate()
+	glfw.WindowHint(glfw.ContextVersionMajor, 4)
+	glfw.WindowHint(glfw.ContextVersionMinor, 1)
+	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
+	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 	window, err := glfw.CreateWindow(width, height, "Brick", nil, nil)
 	if err != nil {
 		panic(err)
